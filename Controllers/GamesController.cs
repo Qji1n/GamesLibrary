@@ -23,17 +23,34 @@ namespace GamesLibrary.Controllers
             return Ok(games);
         }
 
-        // GET api/<GamesController>/5
-        //[HttpGet("{id}")]
-        //public string Get(int id)
-        //{
-        //    return "value";
-        //}
+        //GET api/<GamesController>/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Game>> GetGameById(int id)
+        {
+            var game = await _gameRepository.GetGameByIdAsync(id);
+
+            if(game == null)
+                return NotFound();
+            return Ok(game);
+        }
 
         // POST api/<GamesController>
         [HttpPost]
         public async Task<ActionResult<Game>> CreateGame(Game game)
         {
+            var existingTypes = await _gameRepository.GetExistingTypesAsync(game.GameTypes);
+            var newTypes = game.GameTypes
+                                .Where(t => !existingTypes.Any(et => et.Name == t.Name))
+                                .Select(t => new GameType { Name = t.Name, Games = new List<Game>()})
+                                .ToList();
+
+            foreach (var type in newTypes)
+            {
+                await _gameRepository.AddGameTypeAsync(type);
+            }
+
+            game.GameTypes = existingTypes.Concat(newTypes).ToList();
+
             var newGame = await _gameRepository.AddGameAsync(game);
             return CreatedAtAction(nameof(GetGames), new { id = newGame.Id }, newGame);
         }

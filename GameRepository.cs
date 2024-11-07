@@ -18,9 +18,23 @@ namespace GamesLibrary
             return game;
         }
 
+        public async Task<IEnumerable<GameType>> GetExistingTypesAsync(IEnumerable<GameType> types)
+        {
+            var typeNames = types.Select(t => t.Name).ToList();
+            return await _context.GameTypes
+                                 .Where(t => typeNames.Contains(t.Name))
+                                 .ToListAsync();
+        }
+
+        public async Task AddGameTypeAsync(GameType type)
+        {
+            _context.GameTypes.Add(type);
+            await _context.SaveChangesAsync();
+        }
+
         public async Task<IEnumerable<Game>> GetAllGamesAsync(string gameType = null)
         {
-            IQueryable<Game> query = _context.Games.Include(g => g.GameTypes);
+            IQueryable<Game> query = _context.Games.Include(t => t.GameTypes);
 
             if (!string.IsNullOrEmpty(gameType))
             {
@@ -28,6 +42,13 @@ namespace GamesLibrary
             }
 
             return await query.ToListAsync();
+        }
+
+        public async Task<Game> GetGameByIdAsync(int id)
+        {
+            return await _context.Games
+                .Include(game => game.GameTypes)
+                .FirstOrDefaultAsync(game => game.Id == id);
         }
 
         public async Task<Game> UpdateGameAsync(Game game)
